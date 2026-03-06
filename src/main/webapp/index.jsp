@@ -21,7 +21,10 @@
     <body>
         <h1 class="text-center text-danger">Iniciando el proyecto</h1>
 
-
+        <button class="btn btn-info">hola</button>
+        
+        
+        
  <!-- Bootstrap JavaScript Libraries -->
         <script
             src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
