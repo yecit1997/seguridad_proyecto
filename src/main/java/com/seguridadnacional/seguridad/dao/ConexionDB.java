@@ -8,7 +8,7 @@ public class ConexionDB {
 
     private static final String URL    = "jdbc:mysql://localhost:3306/seguridad_nacional?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
     private static final String USUARIO = "root";
-    private static final String PASSWORD = "Yecit19970730";
+    private static final String PASSWORD = "";
 
     static {
         try {
