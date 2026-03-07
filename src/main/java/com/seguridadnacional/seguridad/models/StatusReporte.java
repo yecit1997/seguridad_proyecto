@@ -1,39 +1,28 @@
 package com.seguridadnacional.seguridad.models;
 
-/**
- * Modelo para la tabla: status_reporte
- *
- * CREATE TABLE status_reporte (
- *   id_status_reporte INT NOT NULL AUTO_INCREMENT,
- *   status            VARCHAR(45) NOT NULL,
- *   PRIMARY KEY (id_status_reporte)
- * );
- */
 public class StatusReporte {
 
     private int    idStatusReporte;
-    private String status;           // NOT NULL
+    private String nombre;
 
     public StatusReporte() {}
 
-    public StatusReporte(int idStatusReporte, String status) {
+    public StatusReporte(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public StatusReporte(int idStatusReporte, String nombre) {
         this.idStatusReporte = idStatusReporte;
-        this.status          = status;
+        this.nombre          = nombre;
     }
 
-    /** Constructor para INSERT */
-    public StatusReporte(String status) {
-        this.status = status;
-    }
-
-    public int    getIdStatusReporte()                         { return idStatusReporte; }
-    public void   setIdStatusReporte(int idStatusReporte)      { this.idStatusReporte = idStatusReporte; }
-
-    public String getStatus()                { return status; }
-    public void   setStatus(String status)   { this.status = status; }
+    public int    getIdStatusReporte()         { return idStatusReporte; }
+    public void   setIdStatusReporte(int id)   { this.idStatusReporte = id; }
+    public String getNombre()                  { return nombre; }
+    public void   setNombre(String nombre)     { this.nombre = nombre; }
 
     @Override
     public String toString() {
-        return "StatusReporte{idStatusReporte=" + idStatusReporte + ", status='" + status + "'}";
+        return "StatusReporte{id=" + idStatusReporte + ", nombre=" + nombre + "}";
     }
 }

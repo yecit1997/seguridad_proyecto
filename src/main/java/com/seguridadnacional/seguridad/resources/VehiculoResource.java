@@ -8,80 +8,74 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 
 @Path("/vehiculos")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class VehiculoResource {
 
     private final VehiculoController controller = new VehiculoController();
 
-    /** GET /vehiculos */
     @GET
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarTodos() {
         try {
             List<Vehiculo> lista = controller.listarTodos();
             return Response.ok(lista).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /vehiculos/{id} */
     @GET
     @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response buscarPorId(@PathParam("id") int id) {
         try {
-            return Response.ok(controller.buscarPorId(id)).build();
+            Vehiculo v = controller.buscarPorId(id);
+            if (v == null) return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(v).build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /vehiculos/placa/{placa} */
     @GET
     @Path("/placa/{placa}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response buscarPorPlaca(@PathParam("placa") String placa) {
         try {
-            return Response.ok(controller.buscarPorPlaca(placa)).build();
+            Vehiculo v = controller.buscarPorPlaca(placa);
+            if (v == null) return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(v).build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** POST /vehiculos */
     @POST
-    public Response registrar(Vehiculo vehiculo) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response crear(Vehiculo v) {
         try {
-            return Response.status(Response.Status.CREATED)
-                           .entity(controller.registrarVehiculo(vehiculo)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            // crear() retorna el Vehiculo con el id generado
+            Vehiculo creado = controller.crear(v);
+            return Response.status(Response.Status.CREATED).entity(creado).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** PUT /vehiculos/{id} */
     @PUT
     @Path("/{id}")
-    public Response actualizar(@PathParam("id") int id, Vehiculo vehiculo) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response actualizar(@PathParam("id") int id, Vehiculo v) {
         try {
-            vehiculo.setIdVehiculo(id);
-            return Response.ok(controller.actualizar(vehiculo)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            v.setIdVehiculo(id);
+            controller.actualizar(v);
+            return Response.ok(v).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** DELETE /vehiculos/{id} */
     @DELETE
     @Path("/{id}")
     public Response eliminar(@PathParam("id") int id) {
@@ -89,8 +83,7 @@ public class VehiculoResource {
             controller.eliminar(id);
             return Response.noContent().build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 }

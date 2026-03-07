@@ -7,56 +7,58 @@ import java.util.List;
 
 public class GuardaDAO {
 
-    public boolean insertar(Guarda guarda) throws SQLException {
-        String sql = "INSERT INTO guarda (persona_id_persona, areas_id_areas, supervisor_id_supervisor) VALUES (?, ?, ?)";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+    private static final String SELECT_JOIN =
+        "SELECT g.usuario_rol_id_usuario_rol, g.areaAsignada, g.supervisor_id_supervisor, " +
+        "       ur.usuario_id_usuario, ur.rol_id_rol, " +
+        "       u.nombre_usuario, u.contrasena, u.status, " +
+        "       p.id_persona, p.dni, p.nombre, p.apellido, p.correo, p.telefono, " +
+        "       r.nombre AS nombre_rol " +
+        "FROM guarda g " +
+        "JOIN usuario_rol ur ON g.usuario_rol_id_usuario_rol = ur.id_usuario_rol " +
+        "JOIN usuario u      ON ur.usuario_id_usuario = u.id_usuario " +
+        "JOIN persona p      ON u.persona_id_persona  = p.id_persona " +
+        "JOIN rol r          ON ur.rol_id_rol          = r.id_rol ";
 
-            ps.setInt(1, guarda.getPersonaId());
-            ps.setInt(2, guarda.getAreasId());
-            ps.setInt(3, guarda.getSupervisorId());
-            int filas = ps.executeUpdate();
-            if (filas > 0) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) guarda.setIdGuarda(rs.getInt(1));
-                }
-                return true;
-            }
-            return false;
+    public boolean insertar(Guarda g) throws SQLException {
+        String sql = "INSERT INTO guarda (usuario_rol_id_usuario_rol, areaAsignada, supervisor_id_supervisor) VALUES (?,?,?)";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, g.getUsuarioRolId());
+            ps.setString(2, g.getAreaAsignada());
+            if (g.getSupervisor() != null) ps.setInt(3, g.getSupervisorId());
+            else ps.setNull(3, Types.INTEGER);
+            return ps.executeUpdate() > 0;
         }
     }
 
-    public Guarda buscarPorId(int id) throws SQLException {
-        String sql = buildSelectJoin() + " WHERE g.id_guarda = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
+    public Guarda buscarPorId(int usuarioRolId) throws SQLException {
+        String sql = SELECT_JOIN + "WHERE g.usuario_rol_id_usuario_rol = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, usuarioRolId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapear(rs);
+                return rs.next() ? mapear(rs) : null;
             }
         }
-        return null;
     }
 
     public List<Guarda> listarTodos() throws SQLException {
         List<Guarda> lista = new ArrayList<>();
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(buildSelectJoin());
+        String sql = SELECT_JOIN + "ORDER BY p.apellido, p.nombre";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) lista.add(mapear(rs));
         }
         return lista;
     }
 
-    public List<Guarda> listarPorSupervisor(int idSupervisor) throws SQLException {
-        String sql = buildSelectJoin() + " WHERE g.supervisor_id_supervisor = ?";
+    public List<Guarda> listarPorSupervisor(int supervisorId) throws SQLException {
         List<Guarda> lista = new ArrayList<>();
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, idSupervisor);
+        String sql = SELECT_JOIN + "WHERE g.supervisor_id_supervisor = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, supervisorId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) lista.add(mapear(rs));
             }
@@ -64,57 +66,49 @@ public class GuardaDAO {
         return lista;
     }
 
-    public boolean actualizar(Guarda guarda) throws SQLException {
-        String sql = "UPDATE guarda SET persona_id_persona=?, areas_id_areas=?, " +
-                     "supervisor_id_supervisor=? WHERE id_guarda=?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, guarda.getPersonaId());
-            ps.setInt(2, guarda.getAreasId());
-            ps.setInt(3, guarda.getSupervisorId());
-            ps.setInt(4, guarda.getIdGuarda());
+    public boolean actualizar(Guarda g) throws SQLException {
+        String sql = "UPDATE guarda SET areaAsignada=?, supervisor_id_supervisor=? WHERE usuario_rol_id_usuario_rol=?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, g.getAreaAsignada());
+            if (g.getSupervisor() != null) ps.setInt(2, g.getSupervisorId());
+            else ps.setNull(2, Types.INTEGER);
+            ps.setInt(3, g.getUsuarioRolId());
             return ps.executeUpdate() > 0;
         }
     }
 
-    public boolean eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM guarda WHERE id_guarda = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
+    public boolean eliminar(int usuarioRolId) throws SQLException {
+        String sql = "DELETE FROM guarda WHERE usuario_rol_id_usuario_rol = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, usuarioRolId);
             return ps.executeUpdate() > 0;
         }
     }
 
-    private String buildSelectJoin() {
-        return "SELECT g.id_guarda, " +
-               "p.id_persona, p.nombre, p.apellido, p.correo, p.telefono, " +
-               "a.id_areas, a.nombre_area, " +
-               "s.id_supervisor, " +
-               "sp.id_persona AS sp_id_persona, sp.nombre AS sp_nombre, " +
-               "sp.apellido AS sp_apellido, sp.correo AS sp_correo, sp.telefono AS sp_telefono " +
-               "FROM guarda g " +
-               "JOIN persona p    ON g.persona_id_persona       = p.id_persona " +
-               "JOIN areas a      ON g.areas_id_areas           = a.id_areas " +
-               "JOIN supervisor s ON g.supervisor_id_supervisor = s.id_supervisor " +
-               "JOIN persona sp   ON s.persona_id_persona       = sp.id_persona";
-    }
-
-    private Guarda mapear(ResultSet rs) throws SQLException {
-        Persona personaGuarda = new Persona(
-            rs.getInt("id_persona"), rs.getString("nombre"),
-            rs.getString("apellido"), rs.getString("correo"), rs.getString("telefono")
+    public static Guarda mapear(ResultSet rs) throws SQLException {
+        Persona persona = new Persona(
+            rs.getInt("id_persona"), rs.getString("dni"),
+            rs.getString("nombre"),  rs.getString("apellido"),
+            rs.getString("correo"),  rs.getString("telefono")
         );
-        Areas area = new Areas(rs.getInt("id_areas"), rs.getString("nombre_area"));
-
-        Persona personaSupervisor = new Persona(
-            rs.getInt("sp_id_persona"), rs.getString("sp_nombre"),
-            rs.getString("sp_apellido"), rs.getString("sp_correo"), rs.getString("sp_telefono")
+        Usuario usuario = new Usuario(
+            rs.getInt("usuario_id_usuario"), rs.getString("nombre_usuario"),
+            rs.getString("contrasena"), rs.getInt("status") == 1, persona
         );
-        Supervisor supervisor = new Supervisor(rs.getInt("id_supervisor"), personaSupervisor);
+        Rol rol = new Rol(rs.getInt("rol_id_rol"), rs.getString("nombre_rol"));
+        UsuarioRol ur = new UsuarioRol(rs.getInt("usuario_rol_id_usuario_rol"), usuario, rol);
 
-        return new Guarda(rs.getInt("id_guarda"), personaGuarda, area, supervisor);
+        // Supervisor se carga como referencia ligera (solo id) para evitar recursión
+        int supId = rs.getInt("supervisor_id_supervisor");
+        Supervisor supervisor = null;
+        if (!rs.wasNull()) {
+            UsuarioRol urSup = new UsuarioRol();
+            urSup.setIdUsuarioRol(supId);
+            supervisor = new Supervisor(urSup, null);
+        }
+
+        return new Guarda(ur, rs.getString("areaAsignada"), supervisor);
     }
 }

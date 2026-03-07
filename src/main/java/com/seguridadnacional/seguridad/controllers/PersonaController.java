@@ -6,66 +6,30 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class PersonaController {
-
     private final PersonaDAO dao = new PersonaDAO();
 
-    public Persona crearPersona(Persona persona) {
-        try {
-            validar(persona);
-            boolean ok = dao.insertar(persona);
-            if (!ok) throw new RuntimeException("No se pudo crear la persona");
-            return persona;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al crear persona: " + e.getMessage(), e);
-        }
+    public Persona crear(Persona p) {
+        try { int id = dao.insertar(p); p.setIdPersona(id); return p; }
+        catch (SQLException e) { throw new RuntimeException("Error al crear persona: " + e.getMessage(), e); }
     }
-
     public Persona buscarPorId(int id) {
-        try {
-            Persona p = dao.buscarPorId(id);
-            if (p == null) throw new RuntimeException("Persona no encontrada con id: " + id);
-            return p;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al buscar persona: " + e.getMessage(), e);
-        }
+        try { return dao.buscarPorId(id); }
+        catch (SQLException e) { throw new RuntimeException("Error al buscar persona: " + e.getMessage(), e); }
     }
-
+    public Persona buscarPorDni(String dni) {
+        try { return dao.buscarPorDni(dni); }
+        catch (SQLException e) { throw new RuntimeException("Error al buscar por DNI: " + e.getMessage(), e); }
+    }
     public List<Persona> listarTodos() {
-        try {
-            return dao.listarTodos();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al listar personas: " + e.getMessage(), e);
-        }
+        try { return dao.listarTodos(); }
+        catch (SQLException e) { throw new RuntimeException("Error al listar personas: " + e.getMessage(), e); }
     }
-
-    public Persona actualizar(Persona persona) {
-        try {
-            validar(persona);
-            boolean ok = dao.actualizar(persona);
-            if (!ok) throw new RuntimeException("No se pudo actualizar la persona");
-            return persona;
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al actualizar persona: " + e.getMessage(), e);
-        }
+    public void actualizar(Persona p) {
+        try { dao.actualizar(p); }
+        catch (SQLException e) { throw new RuntimeException("Error al actualizar persona: " + e.getMessage(), e); }
     }
-
     public void eliminar(int id) {
-        try {
-            boolean ok = dao.eliminar(id);
-            if (!ok) throw new RuntimeException("No se pudo eliminar la persona con id: " + id);
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al eliminar persona: " + e.getMessage(), e);
-        }
-    }
-
-    private void validar(Persona p) {
-        if (p.getNombre()   == null || p.getNombre().trim().isEmpty())
-            throw new IllegalArgumentException("El nombre es obligatorio");
-        if (p.getApellido() == null || p.getApellido().trim().isEmpty())
-            throw new IllegalArgumentException("El apellido es obligatorio");
-        if (p.getCorreo()   == null || p.getCorreo().trim().isEmpty())
-            throw new IllegalArgumentException("El correo es obligatorio");
-        if (p.getTelefono() == null || p.getTelefono().trim().isEmpty())
-            throw new IllegalArgumentException("El teléfono es obligatorio");
+        try { dao.eliminar(id); }
+        catch (SQLException e) { throw new RuntimeException("Error al eliminar persona: " + e.getMessage(), e); }
     }
 }

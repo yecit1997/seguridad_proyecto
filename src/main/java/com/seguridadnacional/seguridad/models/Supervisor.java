@@ -1,44 +1,40 @@
 package com.seguridadnacional.seguridad.models;
 
-/**
- * Modelo para la tabla: supervisor
- *
- * CREATE TABLE supervisor (
- *   id_supervisor     INT NOT NULL AUTO_INCREMENT,
- *   persona_id_persona INT NOT NULL,
- *   PRIMARY KEY (id_supervisor),
- *   FOREIGN KEY (persona_id_persona) REFERENCES persona(id_persona)
- * );
- */
+import java.time.LocalDate;
+
 public class Supervisor {
 
-    private int     idSupervisor;
-    private Persona persona;       // FK -> persona.id_persona
+    // PK = usuario_rol_id_usuario_rol (FK a usuario_rol)
+    private UsuarioRol  usuarioRol;
+    private LocalDate   fechaAscenso;
 
     public Supervisor() {}
 
-    public Supervisor(int idSupervisor, Persona persona) {
-        this.idSupervisor = idSupervisor;
-        this.persona      = persona;
+    public Supervisor(UsuarioRol usuarioRol, LocalDate fechaAscenso) {
+        this.usuarioRol   = usuarioRol;
+        this.fechaAscenso = fechaAscenso;
     }
 
-    /** Constructor para INSERT */
-    public Supervisor(Persona persona) {
-        this.persona = persona;
+    public UsuarioRol getUsuarioRol()                        { return usuarioRol; }
+    public void       setUsuarioRol(UsuarioRol usuarioRol)   { this.usuarioRol = usuarioRol; }
+    public LocalDate  getFechaAscenso()                      { return fechaAscenso; }
+    public void       setFechaAscenso(LocalDate fechaAscenso){ this.fechaAscenso = fechaAscenso; }
+
+    // Helper: la PK en BD
+    public int getUsuarioRolId() { return usuarioRol != null ? usuarioRol.getIdUsuarioRol() : 0; }
+
+    // Acceso rápido al nombre del supervisor
+    public String getNombreCompleto() {
+        if (usuarioRol != null && usuarioRol.getUsuario() != null
+                && usuarioRol.getUsuario().getPersona() != null) {
+            Persona p = usuarioRol.getUsuario().getPersona();
+            return p.getNombre() + " " + p.getApellido();
+        }
+        return "";
     }
-
-    public int     getIdSupervisor()                       { return idSupervisor; }
-    public void    setIdSupervisor(int idSupervisor)        { this.idSupervisor = idSupervisor; }
-
-    public Persona getPersona()                  { return persona; }
-    public void    setPersona(Persona persona)   { this.persona = persona; }
-
-    /** FK helper */
-    public int getPersonaId() { return persona != null ? persona.getIdPersona() : 0; }
 
     @Override
     public String toString() {
-        return "Supervisor{idSupervisor=" + idSupervisor +
-               ", personaId=" + getPersonaId() + "}";
+        return "Supervisor{usuarioRolId=" + getUsuarioRolId() + ", fechaAscenso=" + fechaAscenso + "}";
     }
 }

@@ -8,116 +8,106 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 
 @Path("/reportes")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class ReporteResource {
 
     private final ReporteController controller = new ReporteController();
 
-    /** GET /reportes */
     @GET
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarTodos() {
         try {
             List<Reporte> lista = controller.listarTodos();
             return Response.ok(lista).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /reportes/{id} */
     @GET
     @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response buscarPorId(@PathParam("id") int id) {
         try {
-            return Response.ok(controller.buscarPorId(id)).build();
+            Reporte r = controller.buscarPorId(id);
+            if (r == null) return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(r).build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /reportes/usuario/{idUsuario} */
     @GET
     @Path("/usuario/{idUsuario}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarPorUsuario(@PathParam("idUsuario") int idUsuario) {
         try {
             return Response.ok(controller.listarPorUsuario(idUsuario)).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /reportes/tipo/{idTipo} */
     @GET
     @Path("/tipo/{idTipo}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarPorTipo(@PathParam("idTipo") int idTipo) {
         try {
             return Response.ok(controller.listarPorTipo(idTipo)).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /reportes/status/{idStatus} */
     @GET
     @Path("/status/{idStatus}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarPorStatus(@PathParam("idStatus") int idStatus) {
         try {
             return Response.ok(controller.listarPorStatus(idStatus)).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** POST /reportes */
     @POST
-    public Response crear(Reporte reporte) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response crear(Reporte r) {
         try {
-            Reporte creado = controller.crearReporte(reporte);
+            // crear() asigna fechaCreacion=now() y retorna el Reporte con id generado
+            Reporte creado = controller.crear(r);
             return Response.status(Response.Status.CREATED).entity(creado).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** PUT /reportes/{id} */
     @PUT
     @Path("/{id}")
-    public Response actualizar(@PathParam("id") int id, Reporte reporte) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response actualizar(@PathParam("id") int id, Reporte r) {
         try {
-            reporte.setIdReporte(id);
-            return Response.ok(controller.actualizar(reporte)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            r.setIdReporte(id);
+            controller.actualizar(r);
+            return Response.ok(r).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** PATCH /reportes/{id}/status/{idStatus} */
     @PATCH
     @Path("/{id}/status/{idStatus}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response actualizarStatus(@PathParam("id") int id, @PathParam("idStatus") int idStatus) {
         try {
-            return Response.ok(controller.actualizarStatus(id, idStatus)).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            controller.actualizarStatus(id, idStatus);
+            return Response.ok().entity("{\"mensaje\":\"Estado actualizado\"}").build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** DELETE /reportes/{id} */
     @DELETE
     @Path("/{id}")
     public Response eliminar(@PathParam("id") int id) {
@@ -125,8 +115,7 @@ public class ReporteResource {
             controller.eliminar(id);
             return Response.noContent().build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 }

@@ -1,92 +1,65 @@
 package com.seguridadnacional.seguridad.servlets;
 
+import com.seguridadnacional.seguridad.controllers.AlertaController;
 import com.seguridadnacional.seguridad.controllers.UsuarioController;
+import com.seguridadnacional.seguridad.controllers.UsuarioRolController;
+import com.seguridadnacional.seguridad.models.Alerta;
 import com.seguridadnacional.seguridad.models.Usuario;
+import com.seguridadnacional.seguridad.models.UsuarioRol;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.List;
 
-/**
- * Maneja autenticación: login y logout.
- * GET  /auth  -> redirige a login.jsp
- * POST /auth  -> procesa credenciales
- * POST /auth?action=logout -> cierra sesión
- */
 @WebServlet("/auth")
 public class SvAuth extends HttpServlet {
 
-    private final UsuarioController controller = new UsuarioController();
+    private final UsuarioController    usuarioCtrl    = new UsuarioController();
+    private final UsuarioRolController usuarioRolCtrl = new UsuarioRolController();
+    private final AlertaController     alertaCtrl     = new AlertaController();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        // Si ya tiene sesión activa, va al dashboard
-        HttpSession session = req.getSession(false);
-        if (session != null && session.getAttribute("usuarioSesion") != null) {
-            resp.sendRedirect(req.getContextPath() + "/dashboard");
-            return;
+        String action = req.getParameter("action");
+        if ("logout".equals(action)) {
+            req.getSession().invalidate();
+            resp.sendRedirect(req.getContextPath() + "/auth?action=login");
+        } else {
+            req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
         }
-        req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
-        String action = req.getParameter("action");
-
-        if ("logout".equals(action)) {
-            cerrarSesion(req, resp);
-            return;
-        }
-
-        iniciarSesion(req, resp);
-    }
-
-    // ─── Login ────────────────────────────────────────────────────────────────
-    private void iniciarSesion(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
         String nombreUsuario = req.getParameter("nombreUsuario");
         String contrasena    = req.getParameter("contrasena");
 
-        if (esVacio(nombreUsuario) || esVacio(contrasena)) {
-            req.setAttribute("error", "Usuario y contraseña son obligatorios");
-            req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
-            return;
-        }
-
         try {
-            Usuario usuario = controller.login(nombreUsuario.trim(), contrasena.trim());
+            Usuario usuario = usuarioCtrl.login(nombreUsuario, contrasena);
+
+            // Cargar roles del usuario
+            List<UsuarioRol> roles = usuarioRolCtrl.listarPorUsuario(usuario.getIdUsuario());
+            // Determinar rol principal (primer rol asignado)
+            String rolPrincipal = roles.isEmpty() ? "SIN_ROL" : roles.get(0).getRol().getNombre();
+
+            // Cargar alertas no leídas
+            List<Alerta> alertasNoLeidas = alertaCtrl.listarNoLeidas(usuario.getIdUsuario());
 
             HttpSession session = req.getSession(true);
             session.setAttribute("usuarioSesion", usuario);
-            session.setAttribute("rolSesion", usuario.getRolUsuario().getNombreRolUsuario());
+            session.setAttribute("rolesSesion", roles);
+            session.setAttribute("rolPrincipal", rolPrincipal);
+            session.setAttribute("alertasNoLeidas", alertasNoLeidas);
             session.setMaxInactiveInterval(30 * 60); // 30 minutos
 
             resp.sendRedirect(req.getContextPath() + "/dashboard");
 
         } catch (RuntimeException e) {
-            req.setAttribute("error", "Credenciales incorrectas. Intente de nuevo.");
+            req.setAttribute("error", e.getMessage());
             req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
         }
-    }
-
-    // ─── Logout ───────────────────────────────────────────────────────────────
-    private void cerrarSesion(HttpServletRequest req, HttpServletResponse resp)
-            throws IOException {
-
-        HttpSession session = req.getSession(false);
-        if (session != null) session.invalidate();
-        resp.sendRedirect(req.getContextPath() + "/auth");
-    }
-
-    private boolean esVacio(String valor) {
-        return valor == null || valor.trim().isEmpty();
     }
 }

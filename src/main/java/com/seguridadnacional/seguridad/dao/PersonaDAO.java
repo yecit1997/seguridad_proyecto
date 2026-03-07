@@ -7,86 +7,89 @@ import java.util.List;
 
 public class PersonaDAO {
 
-    // ─── INSERT ────────────────────────────────────────────────────────────────
-    public boolean insertar(Persona persona) throws SQLException {
-        String sql = "INSERT INTO persona (nombre, apellido, correo, telefono) VALUES (?, ?, ?, ?)";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            ps.setString(1, persona.getNombre());
-            ps.setString(2, persona.getApellido());
-            ps.setString(3, persona.getCorreo());
-            ps.setString(4, persona.getTelefono());
-
-            int filas = ps.executeUpdate();
-            if (filas > 0) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) persona.setIdPersona(rs.getInt(1));
-                }
-                return true;
+    // ── INSERT ────────────────────────────────────────────────────────────────
+    public int insertar(Persona p) throws SQLException {
+        String sql = "INSERT INTO persona (dni, nombre, apellido, correo, telefono) VALUES (?,?,?,?,?)";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, p.getDni());
+            ps.setString(2, p.getNombre());
+            ps.setString(3, p.getApellido());
+            ps.setString(4, p.getCorreo());
+            ps.setString(5, p.getTelefono());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                return rs.next() ? rs.getInt(1) : 0;
             }
-            return false;
         }
     }
 
-    // ─── SELECT BY ID ──────────────────────────────────────────────────────────
+    // ── SELECT BY ID ──────────────────────────────────────────────────────────
     public Persona buscarPorId(int id) throws SQLException {
         String sql = "SELECT * FROM persona WHERE id_persona = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapear(rs);
+                return rs.next() ? mapear(rs) : null;
             }
         }
-        return null;
     }
 
-    // ─── SELECT ALL ────────────────────────────────────────────────────────────
-    public List<Persona> listarTodos() throws SQLException {
-        String sql = "SELECT * FROM persona";
-        List<Persona> lista = new ArrayList<>();
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+    // ── SELECT BY DNI ─────────────────────────────────────────────────────────
+    public Persona buscarPorDni(String dni) throws SQLException {
+        String sql = "SELECT * FROM persona WHERE dni = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, dni);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapear(rs) : null;
+            }
+        }
+    }
 
+    // ── SELECT ALL ────────────────────────────────────────────────────────────
+    public List<Persona> listarTodos() throws SQLException {
+        List<Persona> lista = new ArrayList<>();
+        String sql = "SELECT * FROM persona ORDER BY apellido, nombre";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) lista.add(mapear(rs));
         }
         return lista;
     }
 
-    // ─── UPDATE ────────────────────────────────────────────────────────────────
-    public boolean actualizar(Persona persona) throws SQLException {
-        String sql = "UPDATE persona SET nombre=?, apellido=?, correo=?, telefono=? WHERE id_persona=?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, persona.getNombre());
-            ps.setString(2, persona.getApellido());
-            ps.setString(3, persona.getCorreo());
-            ps.setString(4, persona.getTelefono());
-            ps.setInt(5, persona.getIdPersona());
-
+    // ── UPDATE ────────────────────────────────────────────────────────────────
+    public boolean actualizar(Persona p) throws SQLException {
+        String sql = "UPDATE persona SET dni=?, nombre=?, apellido=?, correo=?, telefono=? WHERE id_persona=?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, p.getDni());
+            ps.setString(2, p.getNombre());
+            ps.setString(3, p.getApellido());
+            ps.setString(4, p.getCorreo());
+            ps.setString(5, p.getTelefono());
+            ps.setInt(6, p.getIdPersona());
             return ps.executeUpdate() > 0;
         }
     }
 
-    // ─── DELETE ────────────────────────────────────────────────────────────────
+    // ── DELETE ────────────────────────────────────────────────────────────────
     public boolean eliminar(int id) throws SQLException {
         String sql = "DELETE FROM persona WHERE id_persona = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         }
     }
 
-    // ─── MAPPER ───────────────────────────────────────────────────────────────
-    private Persona mapear(ResultSet rs) throws SQLException {
+    // ── MAPPER ────────────────────────────────────────────────────────────────
+    public static Persona mapear(ResultSet rs) throws SQLException {
         return new Persona(
             rs.getInt("id_persona"),
+            rs.getString("dni"),
             rs.getString("nombre"),
             rs.getString("apellido"),
             rs.getString("correo"),

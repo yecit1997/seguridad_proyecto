@@ -7,92 +7,86 @@ import java.util.List;
 
 public class VehiculoDAO {
 
-    public boolean insertar(Vehiculo vehiculo) throws SQLException {
-        String sql = "INSERT INTO vehiculo (id_vehiculo, placa, conductor_id_conductor) VALUES (?, ?, ?)";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+    private static final String SELECT_JOIN =
+        "SELECT v.id_vehiculo, v.placa, v.conductor_id_fk_persona, " +
+        "       c.licencia, " +
+        "       p.id_persona, p.dni, p.nombre, p.apellido, p.correo, p.telefono " +
+        "FROM vehiculo v " +
+        "LEFT JOIN conductor c ON v.conductor_id_fk_persona = c.id_fk_persona " +
+        "LEFT JOIN persona p   ON c.id_fk_persona = p.id_persona ";
 
-            ps.setInt(1, vehiculo.getIdVehiculo());
-            ps.setString(2, vehiculo.getPlaca());
-            ps.setInt(3, vehiculo.getConductorId());
-            return ps.executeUpdate() > 0;
+    public int insertar(Vehiculo v) throws SQLException {
+        String sql = "INSERT INTO vehiculo (placa, conductor_id_fk_persona) VALUES (?,?)";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, v.getPlaca());
+            if (v.getConductor() != null) ps.setInt(2, v.getConductorIdFkPersona());
+            else ps.setNull(2, Types.INTEGER);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) { return rs.next() ? rs.getInt(1) : 0; }
         }
     }
 
     public Vehiculo buscarPorId(int id) throws SQLException {
-        String sql = buildSelectJoin() + " WHERE v.id_vehiculo = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
+        String sql = SELECT_JOIN + "WHERE v.id_vehiculo = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapear(rs);
-            }
+            try (ResultSet rs = ps.executeQuery()) { return rs.next() ? mapear(rs) : null; }
         }
-        return null;
     }
 
     public Vehiculo buscarPorPlaca(String placa) throws SQLException {
-        String sql = buildSelectJoin() + " WHERE v.placa = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
+        String sql = SELECT_JOIN + "WHERE v.placa = ?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, placa);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapear(rs);
-            }
+            try (ResultSet rs = ps.executeQuery()) { return rs.next() ? mapear(rs) : null; }
         }
-        return null;
     }
 
     public List<Vehiculo> listarTodos() throws SQLException {
         List<Vehiculo> lista = new ArrayList<>();
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(buildSelectJoin());
+        String sql = SELECT_JOIN + "ORDER BY v.placa";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) lista.add(mapear(rs));
         }
         return lista;
     }
 
-    public boolean actualizar(Vehiculo vehiculo) throws SQLException {
-        String sql = "UPDATE vehiculo SET placa=?, conductor_id_conductor=? WHERE id_vehiculo=?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, vehiculo.getPlaca());
-            ps.setInt(2, vehiculo.getConductorId());
-            ps.setInt(3, vehiculo.getIdVehiculo());
+    public boolean actualizar(Vehiculo v) throws SQLException {
+        String sql = "UPDATE vehiculo SET placa=?, conductor_id_fk_persona=? WHERE id_vehiculo=?";
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, v.getPlaca());
+            if (v.getConductor() != null) ps.setInt(2, v.getConductorIdFkPersona());
+            else ps.setNull(2, Types.INTEGER);
+            ps.setInt(3, v.getIdVehiculo());
             return ps.executeUpdate() > 0;
         }
     }
 
     public boolean eliminar(int id) throws SQLException {
         String sql = "DELETE FROM vehiculo WHERE id_vehiculo = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
-            return ps.executeUpdate() > 0;
+        try (Connection c = ConexionDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, id); return ps.executeUpdate() > 0;
         }
     }
 
-    private String buildSelectJoin() {
-        return "SELECT v.id_vehiculo, v.placa, " +
-               "c.id_conductor, c.licencia, " +
-               "p.id_persona, p.nombre, p.apellido, p.correo, p.telefono " +
-               "FROM vehiculo v " +
-               "JOIN conductor c ON v.conductor_id_conductor = c.id_conductor " +
-               "JOIN persona p   ON c.persona_id_persona     = p.id_persona";
-    }
-
-    private Vehiculo mapear(ResultSet rs) throws SQLException {
-        Persona persona = new Persona(
-            rs.getInt("id_persona"), rs.getString("nombre"),
-            rs.getString("apellido"), rs.getString("correo"), rs.getString("telefono")
-        );
-        Conductor conductor = new Conductor(rs.getInt("id_conductor"), rs.getString("licencia"), persona);
+    public static Vehiculo mapear(ResultSet rs) throws SQLException {
+        Conductor conductor = null;
+        int condId = rs.getInt("conductor_id_fk_persona");
+        if (!rs.wasNull()) {
+            Persona p = new Persona(
+                rs.getInt("id_persona"), rs.getString("dni"),
+                rs.getString("nombre"),  rs.getString("apellido"),
+                rs.getString("correo"),  rs.getString("telefono")
+            );
+            conductor = new Conductor(p, rs.getString("licencia"));
+        }
         return new Vehiculo(rs.getInt("id_vehiculo"), rs.getString("placa"), conductor);
     }
 }

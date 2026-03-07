@@ -8,82 +8,72 @@ import java.util.List;
 
 public class ConductorDAO {
 
-    public boolean insertar(Conductor conductor) throws SQLException {
-        String sql = "INSERT INTO conductor (licencia, persona_id_persona) VALUES (?, ?)";
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+    private static final String SELECT_JOIN =
+        "SELECT c.id_fk_persona, c.licencia, " +
+        "       p.dni, p.nombre, p.apellido, p.correo, p.telefono " +
+        "FROM conductor c " +
+        "JOIN persona p ON c.id_fk_persona = p.id_persona ";
 
-            ps.setString(1, conductor.getLicencia());
-            ps.setInt(2, conductor.getPersonaId());
-            int filas = ps.executeUpdate();
-            if (filas > 0) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) conductor.setIdConductor(rs.getInt(1));
-                }
-                return true;
-            }
-            return false;
+    public boolean insertar(Conductor c) throws SQLException {
+        String sql = "INSERT INTO conductor (id_fk_persona, licencia) VALUES (?,?)";
+        try (Connection con = ConexionDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, c.getIdFkPersona());
+            ps.setString(2, c.getLicencia());
+            return ps.executeUpdate() > 0;
         }
     }
 
-    public Conductor buscarPorId(int id) throws SQLException {
-        String sql = buildSelectJoin() + " WHERE c.id_conductor = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
+    public Conductor buscarPorId(int idFkPersona) throws SQLException {
+        String sql = SELECT_JOIN + "WHERE c.id_fk_persona = ?";
+        try (Connection con = ConexionDB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
+            ps.setInt(1, idFkPersona);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapear(rs);
+                return rs.next() ? mapear(rs) : null;
             }
         }
-        return null;
     }
 
     public List<Conductor> listarTodos() throws SQLException {
         List<Conductor> lista = new ArrayList<>();
-        try (Connection con = ConexionDB.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(buildSelectJoin());
+        String sql = SELECT_JOIN + "ORDER BY p.apellido, p.nombre";
+        try (Connection con = ConexionDB.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) lista.add(mapear(rs));
         }
         return lista;
     }
 
-    public boolean actualizar(Conductor conductor) throws SQLException {
-        String sql = "UPDATE conductor SET licencia=?, persona_id_persona=? WHERE id_conductor=?";
-        try (Connection con = ConexionDB.obtenerConexion();
+    public boolean actualizar(Conductor c) throws SQLException {
+        String sql = "UPDATE conductor SET licencia=? WHERE id_fk_persona=?";
+        try (Connection con = ConexionDB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, conductor.getLicencia());
-            ps.setInt(2, conductor.getPersonaId());
-            ps.setInt(3, conductor.getIdConductor());
+            ps.setString(1, c.getLicencia());
+            ps.setInt(2, c.getIdFkPersona());
             return ps.executeUpdate() > 0;
         }
     }
 
-    public boolean eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM conductor WHERE id_conductor = ?";
-        try (Connection con = ConexionDB.obtenerConexion();
+    public boolean eliminar(int idFkPersona) throws SQLException {
+        String sql = "DELETE FROM conductor WHERE id_fk_persona = ?";
+        try (Connection con = ConexionDB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, id);
+            ps.setInt(1, idFkPersona);
             return ps.executeUpdate() > 0;
         }
     }
 
-    private String buildSelectJoin() {
-        return "SELECT c.id_conductor, c.licencia, " +
-               "p.id_persona, p.nombre, p.apellido, p.correo, p.telefono " +
-               "FROM conductor c " +
-               "JOIN persona p ON c.persona_id_persona = p.id_persona";
-    }
-
-    private Conductor mapear(ResultSet rs) throws SQLException {
-        Persona persona = new Persona(
-            rs.getInt("id_persona"), rs.getString("nombre"),
-            rs.getString("apellido"), rs.getString("correo"), rs.getString("telefono")
+    public static Conductor mapear(ResultSet rs) throws SQLException {
+        Persona p = new Persona(
+            rs.getInt("id_fk_persona"),
+            rs.getString("dni"),
+            rs.getString("nombre"),
+            rs.getString("apellido"),
+            rs.getString("correo"),
+            rs.getString("telefono")
         );
-        return new Conductor(rs.getInt("id_conductor"), rs.getString("licencia"), persona);
+        return new Conductor(p, rs.getString("licencia"));
     }
 }

@@ -1,71 +1,46 @@
 package com.seguridadnacional.seguridad.models;
 
-/**
- * Modelo para la tabla: usuario
- *
- * CREATE TABLE usuario (
- *   id_usuario                        INT NOT NULL AUTO_INCREMENT,
- *   nombre_usuario                    VARCHAR(50) NOT NULL,
- *   contrasena                        VARCHAR(20) NOT NULL,
- *   status_usuario_id_status_usuario  INT NOT NULL,
- *   rol_usuario_id_rol_usuario        INT NOT NULL,
- *   PRIMARY KEY (id_usuario),
- *   FOREIGN KEY (status_usuario_id_status_usuario) REFERENCES status_usuario(id_status_usuario),
- *   FOREIGN KEY (rol_usuario_id_rol_usuario)        REFERENCES rol_usuario(id_rol_usuario)
- * );
- */
 public class Usuario {
 
-    private int          idUsuario;
-    private String       nombreUsuario;   // NOT NULL, VARCHAR(50)
-    private String       contrasena;      // NOT NULL, VARCHAR(20)
-    private StatusUsuario statusUsuario;  // FK -> status_usuario.id_status_usuario
-    private RolUsuario   rolUsuario;      // FK -> rol_usuario.id_rol_usuario
+    private int     idUsuario;
+    private String  nombreUsuario;
+    private String  contrasena;
+    private boolean status;      // TINYINT(1): 1=activo, 0=inactivo
+    private Persona persona;
 
     public Usuario() {}
 
-    public Usuario(int idUsuario, String nombreUsuario, String contrasena,
-                   StatusUsuario statusUsuario, RolUsuario rolUsuario) {
+    public Usuario(String nombreUsuario, String contrasena, boolean status, Persona persona) {
+        this.nombreUsuario = nombreUsuario;
+        this.contrasena    = contrasena;
+        this.status        = status;
+        this.persona       = persona;
+    }
+
+    public Usuario(int idUsuario, String nombreUsuario, String contrasena, boolean status, Persona persona) {
         this.idUsuario     = idUsuario;
         this.nombreUsuario = nombreUsuario;
         this.contrasena    = contrasena;
-        this.statusUsuario = statusUsuario;
-        this.rolUsuario    = rolUsuario;
+        this.status        = status;
+        this.persona       = persona;
     }
 
-    /** Constructor para INSERT */
-    public Usuario(String nombreUsuario, String contrasena,
-                   StatusUsuario statusUsuario, RolUsuario rolUsuario) {
-        this.nombreUsuario = nombreUsuario;
-        this.contrasena    = contrasena;
-        this.statusUsuario = statusUsuario;
-        this.rolUsuario    = rolUsuario;
-    }
+    public int     getIdUsuario()                    { return idUsuario; }
+    public void    setIdUsuario(int idUsuario)        { this.idUsuario = idUsuario; }
+    public String  getNombreUsuario()                { return nombreUsuario; }
+    public void    setNombreUsuario(String v)        { this.nombreUsuario = v; }
+    public String  getContrasena()                   { return contrasena; }
+    public void    setContrasena(String contrasena)  { this.contrasena = contrasena; }
+    public boolean isStatus()                        { return status; }
+    public void    setStatus(boolean status)         { this.status = status; }
+    public Persona getPersona()                      { return persona; }
+    public void    setPersona(Persona persona)       { this.persona = persona; }
 
-    public int    getIdUsuario()                   { return idUsuario; }
-    public void   setIdUsuario(int idUsuario)       { this.idUsuario = idUsuario; }
-
-    public String getNombreUsuario()                         { return nombreUsuario; }
-    public void   setNombreUsuario(String nombreUsuario)     { this.nombreUsuario = nombreUsuario; }
-
-    public String getContrasena()                    { return contrasena; }
-    public void   setContrasena(String contrasena)   { this.contrasena = contrasena; }
-
-    public StatusUsuario getStatusUsuario()                        { return statusUsuario; }
-    public void          setStatusUsuario(StatusUsuario s)         { this.statusUsuario = s; }
-
-    public RolUsuario getRolUsuario()                  { return rolUsuario; }
-    public void       setRolUsuario(RolUsuario r)      { this.rolUsuario = r; }
-
-    /** FK helpers para INSERT/UPDATE */
-    public int getStatusUsuarioId() { return statusUsuario != null ? statusUsuario.getIdStatusUsuario() : 0; }
-    public int getRolUsuarioId()    { return rolUsuario    != null ? rolUsuario.getIdRolUsuario()       : 0; }
+    // Helper para PreparedStatement
+    public int getPersonaId() { return persona != null ? persona.getIdPersona() : 0; }
 
     @Override
     public String toString() {
-        return "Usuario{idUsuario=" + idUsuario +
-               ", nombreUsuario='" + nombreUsuario +
-               "', statusId=" + getStatusUsuarioId() +
-               ", rolId=" + getRolUsuarioId() + "}";
+        return "Usuario{id=" + idUsuario + ", usuario=" + nombreUsuario + ", status=" + status + "}";
     }
 }

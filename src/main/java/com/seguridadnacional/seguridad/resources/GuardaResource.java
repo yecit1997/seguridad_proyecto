@@ -8,80 +8,73 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 
 @Path("/guardas")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class GuardaResource {
 
     private final GuardaController controller = new GuardaController();
 
-    /** GET /guardas */
     @GET
+    @Produces(MediaType.APPLICATION_JSON)
     public Response listarTodos() {
         try {
             List<Guarda> lista = controller.listarTodos();
             return Response.ok(lista).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /guardas/{id} */
     @GET
     @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response buscarPorId(@PathParam("id") int id) {
         try {
-            return Response.ok(controller.buscarPorId(id)).build();
+            Guarda g = controller.buscarPorId(id);
+            if (g == null) return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(g).build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** GET /guardas/supervisor/{idSupervisor} */
     @GET
-    @Path("/supervisor/{idSupervisor}")
-    public Response listarPorSupervisor(@PathParam("idSupervisor") int idSupervisor) {
+    @Path("/supervisor/{supervisorId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listarPorSupervisor(@PathParam("supervisorId") int supervisorId) {
         try {
-            return Response.ok(controller.listarPorSupervisor(idSupervisor)).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            List<Guarda> lista = controller.listarPorSupervisor(supervisorId);
+            return Response.ok(lista).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** POST /guardas */
     @POST
-    public Response crear(Guarda guarda) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response crear(Guarda g) {
         try {
-            return Response.status(Response.Status.CREATED)
-                           .entity(controller.crearGuarda(guarda)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            // PK de Guarda es usuario_rol_id — debe venir en el body
+            controller.crear(g);
+            return Response.status(Response.Status.CREATED).entity(g).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** PUT /guardas/{id} */
     @PUT
     @Path("/{id}")
-    public Response actualizar(@PathParam("id") int id, Guarda guarda) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response actualizar(@PathParam("id") int id, Guarda g) {
         try {
-            guarda.setIdGuarda(id);
-            return Response.ok(controller.actualizar(guarda)).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(e.getMessage()).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                           .entity(e.getMessage()).build();
+            // id = usuarioRolId — se ignora si ya viene en el objeto
+            controller.actualizar(g);
+            return Response.ok(g).build();
+        } catch (RuntimeException e) {
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
-    /** DELETE /guardas/{id} */
     @DELETE
     @Path("/{id}")
     public Response eliminar(@PathParam("id") int id) {
@@ -89,8 +82,7 @@ public class GuardaResource {
             controller.eliminar(id);
             return Response.noContent().build();
         } catch (RuntimeException e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(e.getMessage()).build();
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 }
