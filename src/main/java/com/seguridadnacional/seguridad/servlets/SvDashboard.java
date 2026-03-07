@@ -1,87 +1,74 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package com.seguridadnacional.seguridad.servlets;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import com.seguridadnacional.seguridad.controllers.ReporteController;
+import com.seguridadnacional.seguridad.controllers.GuardaController;
+import com.seguridadnacional.seguridad.controllers.UsuarioController;
+import com.seguridadnacional.seguridad.models.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
 
 /**
- *
- * @author user
+ * Dashboard principal — carga resumen según el rol del usuario en sesión.
+ * GET /dashboard
  */
-@WebServlet(name = "SvDashboard", urlPatterns = {"/dashboard"})
+@WebServlet("/dashboard")
 public class SvDashboard extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+    private final ReporteController  reporteCtrl = new ReporteController();
+    private final GuardaController   guardaCtrl  = new GuardaController();
+    private final UsuarioController  usuarioCtrl = new UsuarioController();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet SvDashboard</title>");
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet SvDashboard at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
+
+        HttpSession session = req.getSession(false);
+
+        // Protección: si no hay sesión activa, redirigir al login
+        if (session == null || session.getAttribute("usuarioSesion") == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth");
+            return;
         }
+
+        Usuario usuario = (Usuario) session.getAttribute("usuarioSesion");
+        String  rol     = (String)  session.getAttribute("rolSesion");
+
+        // Cargar datos según el rol
+        switch (rol.toUpperCase()) {
+            case "GUARDA":
+                // Solo ve sus propios reportes
+                req.setAttribute("misReportes",
+                    reporteCtrl.listarPorUsuario(usuario.getIdUsuario()));
+                break;
+
+            case "SUPERVISOR":
+                // Ve todos los reportes y su lista de guardas
+                req.setAttribute("todosReportes", reporteCtrl.listarTodos());
+                req.setAttribute("misGuardas",
+                    guardaCtrl.listarPorSupervisor(
+                        Integer.parseInt(req.getParameter("idSupervisor") != null
+                            ? req.getParameter("idSupervisor") : "0")));
+                break;
+
+            case "ADMIN":
+            case "PERSONAL_ADMINISTRATIVO":
+                // Vista completa
+                req.setAttribute("todosReportes", reporteCtrl.listarTodos());
+                req.setAttribute("totalUsuarios", usuarioCtrl.listarTodos().size());
+                req.setAttribute("totalGuardas",  guardaCtrl.listarTodos().size());
+                break;
+
+            default:
+                req.setAttribute("todosReportes", reporteCtrl.listarTodos());
+                break;
+        }
+
+        req.setAttribute("usuario", usuario);
+        req.getRequestDispatcher("/WEB-INF/views/dashboard.jsp").forward(req, resp);
     }
-
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
-
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
 }

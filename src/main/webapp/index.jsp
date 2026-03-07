@@ -1,10 +1,5 @@
-<%-- 
-    Document   : index
-    Created on : 3/03/2026, 8:44:39 p. m.
-    Author     : user
---%>
-
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page contentType="text/html;charset=UTF-8" %>
+<% response.sendRedirect(request.getContextPath() + "/auth"); %>
 <!DOCTYPE html>
 <html>
     <head>

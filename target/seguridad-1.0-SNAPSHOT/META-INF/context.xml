@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Context path="/seguridad"/>
-<Context>
+<!--<Context>
     <Resource name="jdbc/reportesDB"
               auth="Container"
               type="javax.sql.DataSource"
@@ -10,4 +10,4 @@
               password="TuClaveSegura123"
               driverClassName="com.mysql.cj.jdbc.Driver"
               url="jdbc:mysql://localhost:3306/reportes_seguridad?useSSL=false&amp;serverTimezone=UTC"/>
-</Context>
+</Context>-->

@@ -1,87 +1,92 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package com.seguridadnacional.seguridad.servlets;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import com.seguridadnacional.seguridad.controllers.UsuarioController;
+import com.seguridadnacional.seguridad.models.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
 
 /**
- *
- * @author user
+ * Maneja autenticación: login y logout.
+ * GET  /auth  -> redirige a login.jsp
+ * POST /auth  -> procesa credenciales
+ * POST /auth?action=logout -> cierra sesión
  */
-@WebServlet(name = "SvAuth", urlPatterns = {"/auth"})
+@WebServlet("/auth")
 public class SvAuth extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+    private final UsuarioController controller = new UsuarioController();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet SvAuth</title>");
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet SvAuth at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
+
+        // Si ya tiene sesión activa, va al dashboard
+        HttpSession session = req.getSession(false);
+        if (session != null && session.getAttribute("usuarioSesion") != null) {
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+            return;
+        }
+        req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String action = req.getParameter("action");
+
+        if ("logout".equals(action)) {
+            cerrarSesion(req, resp);
+            return;
+        }
+
+        iniciarSesion(req, resp);
+    }
+
+    // ─── Login ────────────────────────────────────────────────────────────────
+    private void iniciarSesion(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        String nombreUsuario = req.getParameter("nombreUsuario");
+        String contrasena    = req.getParameter("contrasena");
+
+        if (esVacio(nombreUsuario) || esVacio(contrasena)) {
+            req.setAttribute("error", "Usuario y contraseña son obligatorios");
+            req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
+            return;
+        }
+
+        try {
+            Usuario usuario = controller.login(nombreUsuario.trim(), contrasena.trim());
+
+            HttpSession session = req.getSession(true);
+            session.setAttribute("usuarioSesion", usuario);
+            session.setAttribute("rolSesion", usuario.getRolUsuario().getNombreRolUsuario());
+            session.setMaxInactiveInterval(30 * 60); // 30 minutos
+
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+
+        } catch (RuntimeException e) {
+            req.setAttribute("error", "Credenciales incorrectas. Intente de nuevo.");
+            req.getRequestDispatcher("/auth/login.jsp").forward(req, resp);
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    // ─── Logout ───────────────────────────────────────────────────────────────
+    private void cerrarSesion(HttpServletRequest req, HttpServletResponse resp)
+            throws IOException {
+
+        HttpSession session = req.getSession(false);
+        if (session != null) session.invalidate();
+        resp.sendRedirect(req.getContextPath() + "/auth");
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    private boolean esVacio(String valor) {
+        return valor == null || valor.trim().isEmpty();
     }
-
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
 }
