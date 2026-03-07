@@ -52,7 +52,7 @@
         .form-control:focus, .form-select:focus { background: #0d1117; border-color: var(--accent);
             box-shadow: 0 0 0 .25rem rgba(230,168,23,.15); color: #e6edf3; }
         .btn-accent { background: var(--accent); border: none; color: #0d1117; font-weight: 600; }
-        .btn-accent:hover { background: #2583ff; color: #0d1117; }
+        .btn-accent:hover { background: #2529ff; color: #0d1117; }
         select option { background: #0d1117; }
     </style>
 </head>
@@ -61,7 +61,9 @@
 <!-- SIDEBAR -->
 <nav id="sidebar">
     <div class="brand d-flex align-items-center gap-2">
-        <i class="bi bi-shield-lock-fill"></i>
+        <img src="${pageContext.request.contextPath}/img/LOGO.png"
+            alt="Logo"
+            style="height: 38px; width: auto; object-fit: contain;">
         <span>Seguridad Nacional</span>
     </div>
 
